@@ -35,7 +35,7 @@ public static class ColorLibrary
         {
             case 0:
                 {
-                    return "808080"; // Disable Color (Erase)
+                    return "0"; // Disable Color (Erase)
                 }
 
             case 1:

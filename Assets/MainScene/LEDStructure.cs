@@ -19,8 +19,9 @@ public class LEDStructure
         feat = 0;
         x = x_;
         y = y_;
-        color = color_;
         velocity = velocity_;
+        if (velocity != 0) color = color_;
+        else color = Color.gray;
         pulseMode = pulseMode_;
         manage_chain = manage_chain_;
         manage_x = manage_x_;
@@ -32,7 +33,7 @@ public class LEDStructure
         x = x_;
         y = y_;
         velocity = 0;
-        ColorUtility.TryParseHtmlString("#" + ColorLibrary.Velo2HTML(0), out color);
+        color = Color.gray;
         manage_chain = manage_chain_;
         manage_x = manage_x_;
         manage_y = manage_y_;
