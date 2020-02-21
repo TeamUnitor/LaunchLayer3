@@ -45,23 +45,28 @@
     <ImplicitlyExpandDesignTimeFacades>false</ImplicitlyExpandDesignTimeFacades>
   </PropertyGroup>
   <ItemGroup>
-     <Compile Include="Assets\FileBrowser\Script\FileBrowser.cs" />
-     <Compile Include="Assets\FileBrowser\Script\testFileBrowser.cs" />
-     <Compile Include="Assets\MainMenu\ExitButton.cs" />
-     <Compile Include="Assets\MainMenu\MidiButton.cs" />
-     <Compile Include="Assets\MainMenu\PlayButton.cs" />
-     <Compile Include="Assets\MainMenu\SettingsButton.cs" />
+     <Compile Include="Assets\EtcScenes\FileBrowser\Script\FileBrowser.cs" />
+     <Compile Include="Assets\EtcScenes\FileBrowser\Script\testFileBrowser.cs" />
+     <Compile Include="Assets\EtcScenes\MainMenu\ExitButton.cs" />
+     <Compile Include="Assets\EtcScenes\MainMenu\MidiButton.cs" />
+     <Compile Include="Assets\EtcScenes\MainMenu\PlayButton.cs" />
+     <Compile Include="Assets\EtcScenes\MainMenu\SettingsButton.cs" />
+     <Compile Include="Assets\EtcScenes\MidiDevicesScene\ItemListHandler.cs" />
+     <Compile Include="Assets\EtcScenes\MidiDevicesScene\ItemLocalHandler.cs" />
+     <Compile Include="Assets\EtcScenes\MidiDevicesScene\MidiLocalHandler.cs" />
+     <Compile Include="Assets\EtcScenes\SettingsScene\SaveButton.cs" />
+     <Compile Include="Assets\EtcScenes\SettingsScene\SliderHandler.cs" />
+     <Compile Include="Assets\MainScene\ButtonAboutEtc.cs" />
      <Compile Include="Assets\MainScene\ButtonHandler.cs" />
      <Compile Include="Assets\MainScene\ColorLibrary.cs" />
      <Compile Include="Assets\MainScene\LEDCompiler.cs" />
      <Compile Include="Assets\MainScene\LEDStructure.cs" />
      <Compile Include="Assets\MainScene\LaunchpadHandler.cs" />
      <Compile Include="Assets\MainScene\MainProjectLoader.cs" />
+     <Compile Include="Assets\MainScene\PadInfoStructure.cs" />
      <Compile Include="Assets\MainScene\SoundManager.cs" />
      <Compile Include="Assets\MainScene\UnitorSetups.cs" />
-     <Compile Include="Assets\SettingsScene\SaveButton.cs" />
-     <Compile Include="Assets\SettingsScene\SliderHandler.cs" />
-     <None Include="Assets\FileBrowser\readme.txt" />
+     <None Include="Assets\EtcScenes\FileBrowser\readme.txt" />
  <Reference Include="Unity.Timeline.Editor">
  <HintPath>C:/Users/gobac/Documents/Unity Projects/ProjectUnitor - Performance Edition/Library/ScriptAssemblies/Unity.Timeline.Editor.dll</HintPath>
  </Reference>

@@ -36,6 +36,7 @@ public class MainProjectLoader : MonoBehaviour
 #endregion
 public static List<LEDStructure> LEDThreadQueue;
 public static List<LEDStructure> LEDMCThreadQueue;
+public static List<PadInfoStructure> PadInfoRequestQueue;
 public static float fadeDuration = 0.001f;
 
 public static string unipackPath = string.Empty;
@@ -74,6 +75,7 @@ public static int UniPack_Chains = 1;
 
         LEDThreadQueue = new List<LEDStructure>();
         LEDMCThreadQueue = new List<LEDStructure>();
+        PadInfoRequestQueue = new List<PadInfoStructure>();
 
         soundManager = GameObject.Find("SoundManager").GetComponent<SoundManager>();
 
@@ -83,6 +85,9 @@ public static int UniPack_Chains = 1;
         if (startAtLoad == true) {
             LoadPack(unipackPath);
         }
+
+        //if (LaunchpadHandler.midiinput_avail == true)
+            //StartCoroutine(Launchpad_ReadRequest());
     }
 
     // Update is called once per frame
@@ -90,6 +95,7 @@ public static int UniPack_Chains = 1;
     {
         List<LEDStructure> LEDThreadQueue_RL = new List<LEDStructure>();
         List<LEDStructure> LEDMCThreadQueue_RL = new List<LEDStructure>();
+        List<PadInfoStructure> PadInfoRequestQueue_RL = new List<PadInfoStructure>();
 
         //LED Thread Worker
         for (int i = 0; i < LEDThreadQueue.Count; i++) {
@@ -98,10 +104,10 @@ public static int UniPack_Chains = 1;
             
                 switch(item.feat) {
                     case 0: //On
-                        ctrl["u" + item.x.ToString() + item.y.ToString()].colors = ColorLibrary.GetButtonColor(item.color, ctrl["u" + item.x.ToString() + item.y.ToString()].colors);
+                        LaunchpadHandler.PadSendNote(item.x, item.y, item.velocity, item.color, false);
                         break;
                     case 1: //Off
-                        ctrl["u" + item.x.ToString() + item.y.ToString()].colors = ColorLibrary.GetButtonColor(Color.gray, ctrl["u" + item.x.ToString() + item.y.ToString()].colors);
+                        LaunchpadHandler.PadSendNote(item.x, item.y, item.velocity, Color.gray, false);
                         break;
                     case 3: //LED Wormhole
                         break;
@@ -125,10 +131,10 @@ public static int UniPack_Chains = 1;
             
                 switch(item.feat) {
                     case 0: //On
-                        ctrl["mc" + item.y.ToString()].colors = ColorLibrary.GetButtonColor(item.color, ctrl["mc" + item.y.ToString()].colors);
+                        LaunchpadHandler.mcSendNote(item.y, item.velocity, item.color, false);
                         break;
                     case 1: //Off
-                        ctrl["mc" + item.y.ToString()].colors = ColorLibrary.GetButtonColor(Color.gray, ctrl["mc" + item.y.ToString()].colors);
+                        LaunchpadHandler.mcSendNote(item.y, 0, Color.gray, false);
                         break;
                 }
 
@@ -141,6 +147,28 @@ public static int UniPack_Chains = 1;
         }
         LEDMCThreadQueue_RL.Clear();
 
+        if (LaunchpadHandler.midiinput_avail == true) { //LAUNCHPAD HANDLER (MAIN THREAD)
+            for (int i = 0; i < PadInfoRequestQueue.Count; i++) {
+                PadInfoStructure item = PadInfoRequestQueue[i];
+                Pad_VTouch(item.chain, item.x, item.y, item.touchMode);
+
+                PadInfoRequestQueue_RL.Add(item);
+            }
+
+            for (int i = 0; i < PadInfoRequestQueue_RL.Count; i++) {
+                PadInfoRequestQueue.Remove(PadInfoRequestQueue_RL[i]);
+            }
+            PadInfoRequestQueue_RL.Clear();
+        }
+
+    }
+
+    IEnumerator Launchpad_ReadRequest() {
+        while (true) {
+            yield return null;
+
+            
+        }
     }
 
     public void LoadPack(string path) {
@@ -328,7 +356,127 @@ public static int UniPack_Chains = 1;
     }
 
     public static void Launchpad_MessageReceived(object sender, MidiInMessageEventArgs e) {
+        if (e.MidiEvent == null && e.MidiEvent.CommandCode == MidiCommandCode.AutoSensing) 
+            return;
 
+        if (e.MidiEvent.CommandCode == MidiCommandCode.NoteOn) {
+            NoteEvent NoteCasted = (NoteEvent)e.MidiEvent;
+            int NoteNum = NoteCasted.NoteNumber;
+            int x = 1;
+            int y = 1;
+
+            if (LaunchpadHandler.midiinput_kind == 0) { //Launchpad S / Mini
+                x = (int)Math.Truncate(NoteNum / 16f) + 1;
+                y = (NoteNum % 16) + 1;
+            }
+            else if (LaunchpadHandler.midiinput_kind == 1) { //Launchpad MK2
+                x = 9 - (int)Math.Truncate(NoteNum / 10f);
+                y = NoteNum % 10;
+            }
+            else if (LaunchpadHandler.midiinput_kind == 2) { //Launchpad Pro
+                x = 9 - (int)Math.Truncate(NoteNum / 10f);
+                y = NoteNum % 10;
+            }
+            else if (LaunchpadHandler.midiinput_kind == 3) { //MIDI FIGHTER 64
+                System.Drawing.Point key = LaunchpadHandler.MIDIFighter64_GetKey(NoteNum);
+                x = key.X;
+                y = key.Y;
+            }
+            else if (LaunchpadHandler.midiinput_kind == 4) { //Launchpad X / Mini MK3
+                x = 9 - (int)Math.Truncate(NoteNum / 10f);
+                y = NoteNum % 10;
+            }
+
+            if (NoteCasted.Velocity > 0) {
+                if (x >= 1 && x <= 8 && y >= 1 && y <= 8)
+                    PadInfoRequestQueue.Add(new PadInfoStructure(UniPack_SelectedChain, x, y, 1));
+                else { //Control Change
+                    if (LaunchpadHandler.midiinput_kind == 0)
+                        y = LaunchpadHandler.LaunchPadS_MC_GetKey(NoteNum);
+                    else if (LaunchpadHandler.midiinput_kind == 1)
+                        y = LaunchpadHandler.LaunchPadMK2_MC_GetKey(NoteNum);
+                    else if (LaunchpadHandler.midiinput_kind == 2)
+                        y = LaunchpadHandler.LaunchPadPro_MC_GetKey(NoteNum);
+                    else if (LaunchpadHandler.midiinput_kind == 4)
+                        y = LaunchpadHandler.LaunchPadX_MC_GetKey(NoteNum);
+                    PadInfoRequestQueue.Add(new PadInfoStructure(UniPack_SelectedChain, -1, y, 1));
+                }
+            }
+            else if (NoteCasted.Velocity == 0) {
+                if (y >= 1 && y <= 8)
+                    PadInfoRequestQueue.Add(new PadInfoStructure(UniPack_SelectedChain, x, y, 0));
+                else
+                    PadInfoRequestQueue.Add(new PadInfoStructure(UniPack_SelectedChain, -1, x + 8, 0)); //CLICKED CHAIN
+            }
+        }
+        else if (e.MidiEvent.CommandCode == MidiCommandCode.NoteOff) { //Only For MIDI FIGHTER 64
+            NoteEvent NoteCasted = (NoteEvent)e.MidiEvent;
+            int NoteNum = NoteCasted.NoteNumber;
+            int x = 1;
+            int y = 1;
+
+            if (LaunchpadHandler.midiinput_kind == 3) {
+                System.Drawing.Point key = LaunchpadHandler.MIDIFighter64_GetKey(NoteNum);
+                x = key.X;
+                y = key.Y;
+
+                if (y >= 1 && y <= 8)
+                    PadInfoRequestQueue.Add(new PadInfoStructure(UniPack_SelectedChain, x, y, 0));
+                else
+                    PadInfoRequestQueue.Add(new PadInfoStructure(UniPack_SelectedChain, -1, x + 8, 0));
+            }
+            else if (LaunchpadHandler.UP_PLAYER_CustomFirmware == true) { //Present NoteOff when you are using Launchpad Pro Custom Firmware instead NoteOn Velocity 0.
+                if (LaunchpadHandler.midiinput_kind == 0) {
+                    x = (int)Math.Truncate(NoteNum / 10f) + 1;
+                    y = (NoteNum % 16) + 1;
+                }
+                else if (LaunchpadHandler.midiinput_kind == 1) {
+                    x = 9 - (int)Math.Truncate(NoteNum / 10f);
+                    y = NoteNum % 10;
+                }
+                else if (LaunchpadHandler.midiinput_kind == 2) {
+                    x = 9 - (int)Math.Truncate(NoteNum / 10f);
+                    y = NoteNum % 10;
+                }
+                else if (LaunchpadHandler.midiinput_kind == 4) {
+                    x = 9 - (int)Math.Truncate(NoteNum / 10f);
+                    y = NoteNum % 10;
+                }
+
+                if (x >= 1 && x <= 8 && y >= 1 && y <= 8)
+                    PadInfoRequestQueue.Add(new PadInfoStructure(UniPack_SelectedChain, x, y, 0));
+                else {
+                    if (LaunchpadHandler.midiinput_kind == 0)
+                        y = LaunchpadHandler.LaunchPadS_MC_GetKey(NoteNum);
+                    else if (LaunchpadHandler.midiinput_kind == 1)
+                        y = LaunchpadHandler.LaunchPadMK2_MC_GetKey(NoteNum);
+                    else if (LaunchpadHandler.midiinput_kind == 2)
+                        y = LaunchpadHandler.LaunchPadPro_MC_GetKey(NoteNum);
+                    else if (LaunchpadHandler.midiinput_kind == 4)
+                        y = LaunchpadHandler.LaunchPadX_MC_GetKey(NoteNum);
+
+                    PadInfoRequestQueue.Add(new PadInfoStructure(UniPack_SelectedChain, -1, y, 0));
+                }
+            }
+        }
+        else if (e.MidiEvent.CommandCode == MidiCommandCode.ControlChange) {
+            ControlChangeEvent NoteCasted = (ControlChangeEvent)e.MidiEvent;
+            int mcKey = 0;
+
+            if (LaunchpadHandler.midiinput_kind == 0)
+                mcKey = LaunchpadHandler.LaunchPadS_MC_GetKey(int.Parse(NoteCasted.Controller.ToString()));
+            else if (LaunchpadHandler.midiinput_kind == 1)
+                mcKey = LaunchpadHandler.LaunchPadMK2_MC_GetKey(int.Parse(NoteCasted.Controller.ToString()));
+           else if (LaunchpadHandler.midiinput_kind == 2)
+                mcKey = LaunchpadHandler.LaunchPadPro_MC_GetKey(int.Parse(NoteCasted.Controller.ToString()));
+            else if (LaunchpadHandler.midiinput_kind == 4)
+                mcKey = LaunchpadHandler.LaunchPadX_MC_GetKey(int.Parse(NoteCasted.Controller.ToString()));
+
+            if (NoteCasted.ControllerValue > 0) //mc Button Clicked
+                PadInfoRequestQueue.Add(new PadInfoStructure(UniPack_SelectedChain, -1, mcKey, 1));
+            else //mc Button UnClicked
+                PadInfoRequestQueue.Add(new PadInfoStructure(UniPack_SelectedChain, -1, mcKey, 0));
+        }
     }
 
     public static string[] SplitByLine(string str) {
@@ -346,6 +494,18 @@ public static int UniPack_Chains = 1;
         for (int i = 1; i <= 32; i++) {
             keySound_MC_Index[UniPack_SelectedChain, i] = 0;
             LED_MC_Index[UniPack_SelectedChain, i] = 0;
+        }
+    }
+
+    public static void FlushLED(bool skipUI) {
+        for (int x = 1; x <= 8; x++) {
+            for (int y = 1; y <= 8; y++) {
+                LaunchpadHandler.PadSendNote(x, y, 0, Color.gray, skipUI);
+            }
+        }
+
+        for (int i = 1; i <= 33; i++) {
+            LaunchpadHandler.mcSendNote(i, 0, Color.gray, skipUI);
         }
     }
 }
