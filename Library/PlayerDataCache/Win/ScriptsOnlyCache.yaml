@@ -17,6 +17,8 @@ ScriptsOnlyBuild:
     - testFileBrowser
     Unity.2D.Tilemap.Editor.dll:
     - UnityEditor.Tilemaps.GridPaintingState
+    - UnityEditor.Tilemaps.GridPaletteBrushes
+    - UnityEditor.Tilemaps.GridPalettes
     - UnityEditor.Tilemaps.SceneViewGridManager
     - UnityEditor.Tilemaps.TileDragAndDropManager
     Unity.Rider.Editor.dll:
@@ -54,7 +56,7 @@ ScriptsOnlyBuild:
     - Class: 104
       Script: {instanceID: 0}
     - Class: 114
-      Script: {instanceID: 12520}
+      Script: {instanceID: 12524}
     - Class: 115
       Script: {instanceID: 0}
     - Class: 157
@@ -91,17 +93,17 @@ ScriptsOnlyBuild:
     - Class: 114
       Script: {instanceID: 11798}
     - Class: 114
-      Script: {instanceID: 12214}
+      Script: {instanceID: 12218}
     - Class: 114
-      Script: {instanceID: 12528}
+      Script: {instanceID: 12532}
     - Class: 114
-      Script: {instanceID: 12730}
+      Script: {instanceID: 12734}
     - Class: 114
-      Script: {instanceID: 13118}
+      Script: {instanceID: 13122}
     - Class: 114
-      Script: {instanceID: 13120}
+      Script: {instanceID: 13124}
     - Class: 114
-      Script: {instanceID: 15942}
+      Script: {instanceID: 15374}
     - Class: 115
       Script: {instanceID: 0}
     - Class: 128
@@ -150,17 +152,17 @@ ScriptsOnlyBuild:
     - Class: 114
       Script: {instanceID: 11798}
     - Class: 114
-      Script: {instanceID: 11932}
+      Script: {instanceID: 11934}
     - Class: 114
-      Script: {instanceID: 12214}
+      Script: {instanceID: 12218}
     - Class: 114
-      Script: {instanceID: 12730}
+      Script: {instanceID: 12734}
     - Class: 114
-      Script: {instanceID: 13120}
+      Script: {instanceID: 13124}
     - Class: 114
-      Script: {instanceID: 13136}
+      Script: {instanceID: 13140}
     - Class: 114
-      Script: {instanceID: 13154}
+      Script: {instanceID: 13158}
     - Class: 115
       Script: {instanceID: 0}
     - Class: 128
@@ -215,17 +217,17 @@ ScriptsOnlyBuild:
     - Class: 114
       Script: {instanceID: 11798}
     - Class: 114
-      Script: {instanceID: 12214}
+      Script: {instanceID: 12218}
     - Class: 114
-      Script: {instanceID: 12310}
+      Script: {instanceID: 12314}
     - Class: 114
-      Script: {instanceID: 12730}
+      Script: {instanceID: 12734}
     - Class: 114
-      Script: {instanceID: 13002}
+      Script: {instanceID: 13006}
     - Class: 114
-      Script: {instanceID: 13120}
+      Script: {instanceID: 13124}
     - Class: 114
-      Script: {instanceID: 13136}
+      Script: {instanceID: 13140}
     - Class: 115
       Script: {instanceID: 0}
     - Class: 128
@@ -270,15 +272,15 @@ ScriptsOnlyBuild:
     - Class: 114
       Script: {instanceID: 11798}
     - Class: 114
-      Script: {instanceID: 12214}
+      Script: {instanceID: 12218}
     - Class: 114
-      Script: {instanceID: 12730}
+      Script: {instanceID: 12734}
     - Class: 114
-      Script: {instanceID: 13024}
+      Script: {instanceID: 13028}
     - Class: 114
-      Script: {instanceID: 13120}
+      Script: {instanceID: 13124}
     - Class: 114
-      Script: {instanceID: 13154}
+      Script: {instanceID: 13158}
     - Class: 115
       Script: {instanceID: 0}
     - Class: 128
@@ -412,7 +414,7 @@ ScriptsOnlyBuild:
     className: GridLayoutGroup
   - hash:
       serializedVersion: 2
-      Hash: 71bb6a6b6c8f052f948db64c7dd3ca4f
+      Hash: 1028c39545bcfa841aaab54121e69a47
     assemblyName: Assembly-CSharp.dll
     namespaceName: 
     className: MainProjectLoader

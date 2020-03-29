@@ -34,9 +34,14 @@ public class MainProjectLoader : MonoBehaviour
     public static int[,] LED_MC_Maximum;
     public static int[,] LED_MC_Index;
 #endregion
+#region "autoPlay"
+public static string autoPlayStat;
+private int autoPlay_value;
+private List<AutoPlayMainHandle> AutoPlayThreadQueue;
+#endregion
 public static List<LEDStructure> LEDThreadQueue;
 public static List<LEDStructure> LEDMCThreadQueue;
-public static List<PadInfoStructure> PadInfoRequestQueue;
+public static Queue<PadInfoStructure> PadInfoRequestQueue;
 public static float fadeDuration = 0.001f;
 
 public static string unipackPath = string.Empty;
@@ -44,6 +49,7 @@ public static bool startAtLoad = false;
 
 public static Dictionary<string, Button> ctrl = new Dictionary<string, Button>();
 public static SoundManager soundManager;
+public Slider slider;
 public static int UniPack_SelectedChain = 1;
 public static int UniPack_Chains = 1;
 
@@ -75,10 +81,14 @@ public static int UniPack_Chains = 1;
 
         LEDThreadQueue = new List<LEDStructure>();
         LEDMCThreadQueue = new List<LEDStructure>();
-        PadInfoRequestQueue = new List<PadInfoStructure>();
+        PadInfoRequestQueue = new Queue<PadInfoStructure>();
+
+        AutoPlayThreadQueue = new List<AutoPlayMainHandle>();
+        autoPlay_value = 0;
+        autoPlayStat = "End";
 
         soundManager = GameObject.Find("SoundManager").GetComponent<SoundManager>();
-
+        slider = GameObject.Find("Slider_AutoPlay").GetComponent<Slider>();
 
         UnitorSetups.SetupButtons();
 
@@ -86,8 +96,12 @@ public static int UniPack_Chains = 1;
             LoadPack(unipackPath);
         }
 
-        //if (LaunchpadHandler.midiinput_avail == true)
-            //StartCoroutine(Launchpad_ReadRequest());
+        if (File.Exists(Application.temporaryCachePath + "/Workspace/autoPlay") == false)
+               GameObject.Find("toggle_AutoPlay").SetActive(false);
+            GameObject.Find("Slider_AutoPlay").SetActive(false);
+        GameObject.Find("toggle_AutoPlay").GetComponent<Toggle>().onValueChanged.AddListener((value) => {
+            AutoPlay_toggleOnChanged(value);
+        });
     }
 
     // Update is called once per frame
@@ -95,7 +109,6 @@ public static int UniPack_Chains = 1;
     {
         List<LEDStructure> LEDThreadQueue_RL = new List<LEDStructure>();
         List<LEDStructure> LEDMCThreadQueue_RL = new List<LEDStructure>();
-        List<PadInfoStructure> PadInfoRequestQueue_RL = new List<PadInfoStructure>();
 
         //LED Thread Worker
         for (int i = 0; i < LEDThreadQueue.Count; i++) {
@@ -147,28 +160,11 @@ public static int UniPack_Chains = 1;
         }
         LEDMCThreadQueue_RL.Clear();
 
-        if (LaunchpadHandler.midiinput_avail == true) { //LAUNCHPAD HANDLER (MAIN THREAD)
-            for (int i = 0; i < PadInfoRequestQueue.Count; i++) {
-                PadInfoStructure item = PadInfoRequestQueue[i];
-                Pad_VTouch(item.chain, item.x, item.y, item.touchMode);
-
-                PadInfoRequestQueue_RL.Add(item);
-            }
-
-            for (int i = 0; i < PadInfoRequestQueue_RL.Count; i++) {
-                PadInfoRequestQueue.Remove(PadInfoRequestQueue_RL[i]);
-            }
-            PadInfoRequestQueue_RL.Clear();
+        if (LaunchpadHandler.midiinput_avail == true && PadInfoRequestQueue.Count > 0) { //LAUNCHPAD HANDLER (MAIN THREAD)
+            PadInfoStructure item = PadInfoRequestQueue.Dequeue();
+            Pad_VTouch(item.chain, item.x, item.y, item.touchMode);
         }
 
-    }
-
-    IEnumerator Launchpad_ReadRequest() {
-        while (true) {
-            yield return null;
-
-            
-        }
     }
 
     public void LoadPack(string path) {
@@ -313,32 +309,19 @@ public static int UniPack_Chains = 1;
     }
 
     public static void PrepareToQueue(int chain, int x, int y, List<LEDStructure> LED_Script) {
-        List<LEDStructure> LEDs = LED_Script;
+        if (LED_Script != null) {
+            LEDStructure[] LEDs = LED_Script.ToArray();
         
-        if (x == -1) { //mc
+            if (x == -1) { //mc
         
-        }
-        else {
-            switch(LED_Loop[chain, x, y, LED_Index[chain, x, y]]) {
-                case 0:
+            }
+            else {
+                switch(LED_Loop[chain, x, y, LED_Index[chain, x, y]]) {
+                    case 0:
 
-                    break;
-                case 1:
-                    int totalD = Mathf.RoundToInt(Time.time * 1000); //default
-                    for (int i = 0; i < LED_Script.Count; i++) {
-                        if (LEDs[i].feat == 2) {
-                            totalD += LEDs[i].delay;
-                        }
-                        else {
-                            LEDs[i].delay = totalD;
-                            if (LEDs[i].x != -1) LEDThreadQueue.Add(LEDs[i]);
-                            else LEDMCThreadQueue.Add(LEDs[i]);
-                        }
-                    }
-                    break;
-                default:
-                    totalD = Mathf.RoundToInt(Time.time * 1000);
-                    for (int loopNumber = 1; loopNumber <= LED_Loop[chain, x, y, LED_Index[chain, x, y]]; loopNumber++) {
+                        break;
+                    case 1:
+                        int totalD = Mathf.RoundToInt(Time.time * 1000); //default
                         for (int i = 0; i < LED_Script.Count; i++) {
                             if (LEDs[i].feat == 2) {
                                 totalD += LEDs[i].delay;
@@ -349,10 +332,148 @@ public static int UniPack_Chains = 1;
                                 else LEDMCThreadQueue.Add(LEDs[i]);
                             }
                         }
-                    }
+                        break;
+                    default:
+                        totalD = Mathf.RoundToInt(Time.time * 1000);
+                        for (int loopNumber = 1; loopNumber <= LED_Loop[chain, x, y, LED_Index[chain, x, y]]; loopNumber++) {
+                            for (int i = 0; i < LED_Script.Count; i++) {
+                                if (LEDs[i].feat == 2) {
+                                    totalD += LEDs[i].delay;
+                                }
+                                else {
+                                    LEDs[i].delay = totalD;
+                                    if (LEDs[i].x != -1) LEDThreadQueue.Add(LEDs[i]);
+                                    else LEDMCThreadQueue.Add(LEDs[i]);
+                                }
+                            }
+                        }
+                        break;
+                }
+            }
+        }
+    }
+
+    public void AutoPlayHandler_New() {
+        Slider slider = GameObject.Find("Slider_AutoPlay").GetComponent<Slider>();
+        AutoPlayThreadQueue = new List<AutoPlayMainHandle>();
+
+        int totalD = Mathf.RoundToInt(Time.time * 1000);
+        int lineChain = 1;
+        string[] autoPlay = File.ReadAllLines(Application.temporaryCachePath + "/Workspace/autoPlay");
+
+        for (int i = 0; i < autoPlay.Length; i++) {
+            string[] sp = autoPlay[i].Split(' ');
+
+            switch (sp[0]) {
+                case "c":
+                case "chain":
+                    AutoPlayThreadQueue.Add(new AutoPlayMainHandle("c", lineChain, 0, Convert.ToInt32(sp[1]), totalD));
+                    lineChain = Convert.ToInt32(sp[1]);
+                    break;
+
+                case "o":
+                case "on":
+                    AutoPlayThreadQueue.Add(new AutoPlayMainHandle("o", lineChain, Convert.ToInt32(sp[1]), Convert.ToInt32(sp[2]), totalD));
+                    break;
+
+                case "f":
+                case "off":
+                    AutoPlayThreadQueue.Add(new AutoPlayMainHandle("f", lineChain, Convert.ToInt32(sp[1]), Convert.ToInt32(sp[2]), totalD));
+                    break;
+
+                case "t":
+                case "touch":
+                    AutoPlayThreadQueue.Add(new AutoPlayMainHandle("t", lineChain, Convert.ToInt32(sp[1]), Convert.ToInt32(sp[2]), totalD));
+                    break;
+
+                case "d":
+                case "delay":
+                    totalD += Convert.ToInt32(sp[1]);
                     break;
             }
         }
+
+        AutoPlayThreadQueue.Add(new AutoPlayMainHandle("d", lineChain, 0, -10, totalD));
+        autoPlayStat = "Go";
+        slider.maxValue = AutoPlayThreadQueue.Count;
+    }
+
+    public void AutoPlay_toggleOnChanged(bool value) {
+        Toggle toggle = GameObject.Find("toggle_AutoPlay").GetComponent<Toggle>();
+
+        if (value) {
+            autoPlay_value = 0;
+            slider.gameObject.SetActive(true);
+            AutoPlayHandler_New();
+            StartCoroutine(AutoPlayHandler());
+        }
+        else {
+        autoPlayStat = "End";
+        slider.value = 0f;
+        slider.gameObject.SetActive(false);
+        }
+    }
+
+    IEnumerator AutoPlayHandler() {
+        List<AutoPlayMainHandle> ToBeRemovedList = new List<AutoPlayMainHandle>();
+        int i, w = 0; //w는 탈출 신호.
+
+        while (w != 1) {
+            for (i = 0; i < AutoPlayThreadQueue.Count; i++) {
+                if (autoPlayStat == "Wait") {
+
+                }
+                else if (autoPlayStat == "End") {
+                    w = 1;
+                    break;
+                }
+
+                if (AutoPlayThreadQueue.Count <= i) 
+                    break;
+
+                if (AutoPlayThreadQueue[i].delay <= Mathf.RoundToInt(Time.time * 1000)) {
+                    autoPlay_value++;
+
+                    Slider slider = GameObject.Find("Slider_AutoPlay").GetComponent<Slider>();
+                    slider.value = (float)autoPlay_value;
+
+                    AutoPlayMainHandle command = AutoPlayThreadQueue[i];
+                    switch (command.feat) {
+                        case "c":
+                            Pad_CCChain(command.y);
+                            break;
+                        case "o":
+                            Pad_VTouch(UniPack_SelectedChain, command.x, command.y, 1);
+                            break;
+                        case "f":
+                            Pad_VTouch(UniPack_SelectedChain, command.x, command.y, 0);
+                            break;
+                        case "t": //UniPad New Command (touch)
+                            Pad_VTouch(UniPack_SelectedChain, command.x, command.y, 1);
+                            Pad_VTouch(UniPack_SelectedChain, command.x, command.y, 0);
+                            break;
+                        case "d":
+                        case "delay":
+                            if (command.y == -10) { 
+                                w = 1;
+                                break;
+                            }
+                            break;
+                    }
+                    ToBeRemovedList.Add(AutoPlayThreadQueue[i]);
+                }
+                if (w == 1) break;
+            }
+
+            for (i = 0; i < ToBeRemovedList.Count; i++)
+                AutoPlayThreadQueue.Remove(ToBeRemovedList[i]);
+            ToBeRemovedList = new List<AutoPlayMainHandle>();
+
+            yield return null;
+        }
+
+        Toggle toggle = GameObject.Find("toggle_AutoPlay").GetComponent<Toggle>();
+        toggle.isOn = false;
     }
 
     public static void Launchpad_MessageReceived(object sender, MidiInMessageEventArgs e) {
@@ -389,7 +510,7 @@ public static int UniPack_Chains = 1;
 
             if (NoteCasted.Velocity > 0) {
                 if (x >= 1 && x <= 8 && y >= 1 && y <= 8)
-                    PadInfoRequestQueue.Add(new PadInfoStructure(UniPack_SelectedChain, x, y, 1));
+                    PadInfoRequestQueue.Enqueue(new PadInfoStructure(UniPack_SelectedChain, x, y, 1));
                 else { //Control Change
                     if (LaunchpadHandler.midiinput_kind == 0)
                         y = LaunchpadHandler.LaunchPadS_MC_GetKey(NoteNum);
@@ -399,14 +520,14 @@ public static int UniPack_Chains = 1;
                         y = LaunchpadHandler.LaunchPadPro_MC_GetKey(NoteNum);
                     else if (LaunchpadHandler.midiinput_kind == 4)
                         y = LaunchpadHandler.LaunchPadX_MC_GetKey(NoteNum);
-                    PadInfoRequestQueue.Add(new PadInfoStructure(UniPack_SelectedChain, -1, y, 1));
+                    PadInfoRequestQueue.Enqueue(new PadInfoStructure(UniPack_SelectedChain, -1, y, 1));
                 }
             }
             else if (NoteCasted.Velocity == 0) {
                 if (y >= 1 && y <= 8)
-                    PadInfoRequestQueue.Add(new PadInfoStructure(UniPack_SelectedChain, x, y, 0));
+                    PadInfoRequestQueue.Enqueue(new PadInfoStructure(UniPack_SelectedChain, x, y, 0));
                 else
-                    PadInfoRequestQueue.Add(new PadInfoStructure(UniPack_SelectedChain, -1, x + 8, 0)); //CLICKED CHAIN
+                    PadInfoRequestQueue.Enqueue(new PadInfoStructure(UniPack_SelectedChain, -1, x + 8, 0)); //CLICKED CHAIN
             }
         }
         else if (e.MidiEvent.CommandCode == MidiCommandCode.NoteOff) { //Only For MIDI FIGHTER 64
@@ -421,9 +542,9 @@ public static int UniPack_Chains = 1;
                 y = key.Y;
 
                 if (y >= 1 && y <= 8)
-                    PadInfoRequestQueue.Add(new PadInfoStructure(UniPack_SelectedChain, x, y, 0));
+                    PadInfoRequestQueue.Enqueue(new PadInfoStructure(UniPack_SelectedChain, x, y, 0));
                 else
-                    PadInfoRequestQueue.Add(new PadInfoStructure(UniPack_SelectedChain, -1, x + 8, 0));
+                    PadInfoRequestQueue.Enqueue(new PadInfoStructure(UniPack_SelectedChain, -1, x + 8, 0));
             }
             else if (LaunchpadHandler.UP_PLAYER_CustomFirmware == true) { //Present NoteOff when you are using Launchpad Pro Custom Firmware instead NoteOn Velocity 0.
                 if (LaunchpadHandler.midiinput_kind == 0) {
@@ -444,7 +565,7 @@ public static int UniPack_Chains = 1;
                 }
 
                 if (x >= 1 && x <= 8 && y >= 1 && y <= 8)
-                    PadInfoRequestQueue.Add(new PadInfoStructure(UniPack_SelectedChain, x, y, 0));
+                    PadInfoRequestQueue.Enqueue(new PadInfoStructure(UniPack_SelectedChain, x, y, 0));
                 else {
                     if (LaunchpadHandler.midiinput_kind == 0)
                         y = LaunchpadHandler.LaunchPadS_MC_GetKey(NoteNum);
@@ -455,7 +576,7 @@ public static int UniPack_Chains = 1;
                     else if (LaunchpadHandler.midiinput_kind == 4)
                         y = LaunchpadHandler.LaunchPadX_MC_GetKey(NoteNum);
 
-                    PadInfoRequestQueue.Add(new PadInfoStructure(UniPack_SelectedChain, -1, y, 0));
+                    PadInfoRequestQueue.Enqueue(new PadInfoStructure(UniPack_SelectedChain, -1, y, 0));
                 }
             }
         }
@@ -473,9 +594,9 @@ public static int UniPack_Chains = 1;
                 mcKey = LaunchpadHandler.LaunchPadX_MC_GetKey(int.Parse(NoteCasted.Controller.ToString()));
 
             if (NoteCasted.ControllerValue > 0) //mc Button Clicked
-                PadInfoRequestQueue.Add(new PadInfoStructure(UniPack_SelectedChain, -1, mcKey, 1));
+                PadInfoRequestQueue.Enqueue(new PadInfoStructure(UniPack_SelectedChain, -1, mcKey, 1));
             else //mc Button UnClicked
-                PadInfoRequestQueue.Add(new PadInfoStructure(UniPack_SelectedChain, -1, mcKey, 0));
+                PadInfoRequestQueue.Enqueue(new PadInfoStructure(UniPack_SelectedChain, -1, mcKey, 0));
         }
     }
 

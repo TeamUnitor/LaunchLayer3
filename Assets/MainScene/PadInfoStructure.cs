@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PadInfoStructure
+public struct PadInfoStructure
 {
     public int chain;
     public int x;
